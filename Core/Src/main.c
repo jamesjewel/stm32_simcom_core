@@ -42,6 +42,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart4;
+UART_HandleTypeDef* gsm_uart = &huart4; /* TODO change uart handle */
+UART_HandleTypeDef* debug_uart = &huart4;
 
 /* USER CODE BEGIN PV */
 
@@ -57,19 +59,39 @@ static void MX_USART4_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t gsm_uart_sendbyte(uint8_t byte) {
-	if(HAL_UART_Transmit(&huart4, &byte, 1, 500) == HAL_OK)
+uint8_t gsm_uart_txbyte(uint8_t byte) {
+	if(HAL_UART_Transmit(gsm_uart, &byte, 1, 500) == HAL_OK)
 		return 1;
 	return 0;
 }
+uint8_t gsm_uart_rxbyte(uint8_t* pbyte) {
+	if(HAL_UART_Receive_IT(gsm_uart, (uint8_t*)pbyte, 1) == HAL_OK)
+		return 1;
+	return 0;
+}
+
 uint8_t gsm_debug_print(char* str) {
 	char* p = str;
 	while(*p != '\0') {
-		if(HAL_UART_Transmit(&huart4, (uint8_t*)p, 1, 500) != HAL_OK)
+		if(HAL_UART_Transmit(debug_uart, (uint8_t*)p, 1, 10) != HAL_OK)
 			return 0;
 		p++;
 	}
 	return 1;
+}
+void gsm_delay(uint16_t t) {
+	HAL_Delay(t);
+}
+uint8_t gsm_pwrkey(uint8_t set_reset) {
+	/* TODO HAL_GPIO_Write */
+}
+uint8_t gsm_rst(uint8_t set_reset) {
+	/* TODO HAL_GPIO_Write */
+}
+
+/* HAL callbacks */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
+	gsm_uart_rx_callback();
 }
 /* USER CODE END 0 */
 
@@ -79,7 +101,7 @@ uint8_t gsm_debug_print(char* str) {
   */
 int main(void)
 {
-
+a
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -109,10 +131,9 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  char str[] = "Jewel is cool!\n";
   while (1)
   {
-	  gsm_debug_print(str);
+	  gsm_test();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

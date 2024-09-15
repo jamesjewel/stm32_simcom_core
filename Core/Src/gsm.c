@@ -13,12 +13,13 @@
 #define GSM_TX_SIZE		100
 #define GSM_RX_SIZE		100
 
-uint8_t gsm_active;
+uint8_t gsm_active, gsm_pwrstate;
+uint8_t rx_byte;
 uint16_t rx_index;
 uint8_t gsm_rx_buff[GSM_RX_SIZE];
 
 /* util functions */
-void _gsm_uart_sendstr(char* str);
+void _gsm_uart_sendbuff(char* buff);
 void _gsm_uart_rxbuffclr();
 void _gsm_uart_txbuffclr();
 void _gsm_debug_printf(const char* str,  ...);
@@ -44,13 +45,14 @@ uint8_t gsm_init() {
 	return gsm_active;
 }
 
-uint8_t gsm_uart_rx_callback(uint8_t byte) {
-	gsm_rx_buff[rx_index++] = byte;
+uint8_t gsm_uart_rx_callback() {
+	gsm_rx_buff[rx_index++] = rx_byte;
 	if(rx_index < GSM_RX_SIZE)
 		rx_index++;
 	else {
 		/* TODO clear rx buff? */
 	}
+	gsm_uart_rxbyte(&rx_byte);
 	return 1; /* TODO fix this */
 }
 
@@ -59,7 +61,7 @@ uint8_t gsm_sendcmd(char* cmd, char* resp, uint16_t timeout) {
 	/* append /r/n */
 	strcat(str, cmd);
 	strcat(str, "/r/n");
-	_gsm_uart_sendstr(cmd);
+	_gsm_uart_sendbuff(cmd);
 	return 1; /* TODO fix this */
 }
 
@@ -69,10 +71,10 @@ uint8_t gsm_sendcmd(char* cmd, char* resp, uint16_t timeout) {
   * => no of bytes
   * call uart_sendbyte in a loop from 0 to strlen
   */
-void _gsm_uart_sendstr(char* str) {
+void _gsm_uart_sendbuff(char* buff) {
 	char* p = str;
 	while(*p != '\0') {
-		gsm_uart_sendbyte(*p);
+		gsm_uart_txbyte(*p);
 		p++;
 	}
 }
@@ -183,4 +185,38 @@ void _gsm_debug_printf(const char* str,  ...) {
 	va_end(ptr);
 	gsm_debug_print(pstr);
 	return;
+}
+
+void gsm_test() {
+	_gsm_debug_printf("%s and %d\n", "str", 1);
+}
+
+void gsm_setpower(uint8_t on_off) {
+	if(!on_off) {
+		gsm_reset(0);
+		gsm_delay(2000);
+		gsm_reset(1);
+		gsm_delay(200);
+
+		gsm_pwrkey(0);
+		gsm_delay(2000);
+		gsm_pwrkey(1);
+		gsm_delay(200);
+	}
+	else {
+		gsm_reset(0);
+		gsm_delay(200);
+		gsm_pwrkey(1);
+		gsm_delay(200);
+		gsm_pwrkey(0);
+		gsm_delay(200);
+		gsm_pwrkey(1);
+
+		gsm_delay(3000);
+		gsm_sendcmd("AT", "", 1000);
+		gsm_sendcmd("AT", "", 1000);
+		gsm_sendcmd("AT+CFUN=1", "OK", 1000);
+		gsm_pwrstate = 1;
+		_gsm_uart_rxbuffclr();
+	}
 }
